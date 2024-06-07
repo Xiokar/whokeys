@@ -6,17 +6,17 @@ import Authenticated from '@/Layouts/Authenticated'
 import { useForm, usePage } from '@inertiajs/inertia-react'
 import { useEffect, useRef } from 'react'
 import SignaturePad from 'signature_pad'
-import React, { useState } from 'react';
+import React from 'react';
 
 export default function CreateSignature({ _key: key }) {
     const { auth } = usePage().props;
     const signaturePad = useRef();
-    const [trousseauAction, setTrousseauAction] = useState('in');
     const { post, data, setData, processing, errors, transform } = useForm({
         number_keys: false,
         number_vigiks: false,
         number_bips: false,
         signature: '',
+        trousseauAction: 'out',
         text: '',
     })
 
@@ -44,11 +44,11 @@ export default function CreateSignature({ _key: key }) {
     }
 
     useEffect(() => {
-        var canvas = document.getElementById('signature')
+        let canvas = document.getElementById('signature')
         signaturePad.current = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' })
 
         function resizeCanvas() {
-            var ratio = Math.max(window.devicePixelRatio || 1, 1)
+            let ratio = Math.max(window.devicePixelRatio || 1, 1)
 
             canvas.width = canvas.offsetWidth * ratio
             canvas.height = canvas.offsetHeight * ratio
@@ -113,8 +113,8 @@ export default function CreateSignature({ _key: key }) {
                         id="trousseauAction"
                         name="trousseauAction"
                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                        value={trousseauAction}
-                        onChange={(e) => setTrousseauAction(e.target.value)} // Met à jour l'état lors de la sélection
+                        value={data.trousseauAction}
+                        onChange={(e) => setData('trousseauAction', e.target.value)} // Met à jour l'état lors de la sélection
                     >
                         <option value="in">Je rentre la clé dans l'agence (IN)</option>
                         <option value="out">Je récupère la clé à mon nom (OUT)</option>

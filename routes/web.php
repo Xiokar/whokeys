@@ -35,7 +35,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/join-agency', [ClientController::class, 'joinAgency'])->name('join-agency');
     Route::post('/clients/exists', [ClientController::class, 'exists'])->name('clients.exists');
 
-    Route::resource('keys', KeyController::class)->except('index', 'create', 'store');
+    Route::resource('keys', KeyController::class)->except('create', 'store');
     Route::get('properties/{property}/keys/create', [KeyController::class, 'create'])->name('keys.create');
     Route::post('properties/{property}/keys', [KeyController::class, 'store'])->name('keys.store');
 

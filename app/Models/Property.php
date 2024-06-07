@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
-use App\Traits\HasSite;
+use App\Traits\HasAgency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Property extends Model
 {
-    use HasFactory, HasSite;
+    use HasFactory, HasAgency;
 
-    protected $with = ['site'];
+    protected $with = ['agency'];
 
     /**
      * @var string[]
@@ -33,7 +33,7 @@ class Property extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return \Illuminate\Database\Eloquent\Relations\hasMany
      */
     public function keys()
     {
@@ -46,14 +46,6 @@ class Property extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
-     */
-    public function agencies()
-    {
-        return $this->belongsToMany(Agency::class);
     }
 
     /**

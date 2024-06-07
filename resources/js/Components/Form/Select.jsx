@@ -1,12 +1,15 @@
 import Label from '@/Components/Form/Label'
 import Error from '@/Components/Form/Error'
 
-export default function Select({ title, className = '', value, onChange, name, data, setData, errors, children, ...props }) {
+export default function Select({ title, className = '', value, onChange, onChangeCallback, name, data, setData, errors, children, ...props }) {
     const handleChange = e => {
         if (setData) {
             setData(data => ({ ...data, [name]: e.target.value }))
         } else {
             onChange(e.target.value)
+        }
+        if (typeof(onChangeCallback) !== 'undefined') {
+            onChangeCallback(e)
         }
     }
 

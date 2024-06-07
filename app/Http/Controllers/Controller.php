@@ -45,7 +45,7 @@ class Controller extends BaseController
             return $agencies->get();
         }
 
-        return collect($admin->site->agencies);
+        return collect($admin->agencies);
     }
 
     /**
@@ -60,7 +60,38 @@ class Controller extends BaseController
             'mobile' => ['required', 'string', 'max:255', 'regex:/^0[6-7]([0-9]{8})$/'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user)],
             'subtype' => ['required', Rule::in(Helper::getSubtypes($type))],
-            'site' => [Auth::user()->isSuper() ? ['required', 'exists:sites,id'] : ['nullable']]
+            'agencies' => [Auth::user()->isSuper() || Auth::user()->agencies()->count() > 1 ? ['required', 'exists:agencies,id'] : ['nullable']]
         ]);
+    }
+    
+    protected function sync_agencies(Request $request, User $client)
+    {
+        if ($request->user()->isSuper()) {
+
+            $client->agencies()->sync($request->agencies);
+
+        } elseif ($request->user()->agencies()->count() > 1) {
+
+            $agencies_to_sync = $client->getAgenciesIds();
+            $user_agencies_ids = $request->user()->getAgenciesIds();
+
+            // Contrôle anti-vol de propriété d'agence
+            foreach ($request->agencies as $agency_id) {
+                // Si l'agence est présente dans la liste des agences reliées à l'utilisateur connecté
+                if (in_array($agency_id, $user_agencies_ids)) {
+                    // On l'ajoute aux agences à synchroniser (sauf si déjà présent)
+                    if (!in_array($agency_id, $agencies_to_sync)) {
+                        $agencies_to_sync[] = $agency_id;
+                    }
+                    
+                // Sinon si l'agence est présente dans la liste des agences reliées à l'utilisateur "$client"
+                } elseif (in_array($agency_id, $agencies_to_sync)) {
+                    // Retrait de l'agence
+                    $agencies_to_sync = array_diff($agencies_to_sync, [$agency_id]);
+                }
+            }
+
+            $client->agencies()->sync($agencies_to_sync);
+        }
     }
 }

@@ -53,6 +53,11 @@ export default function Index({ properties }) {
             sortName: 'properties.postcode',
             render: property => property.postcode,
         },
+        {
+            title: 'Agence',
+            sortName: 'agencies.name',
+            render: property => property.agency?.name || 'Aucune',
+        },
         // {
         //     title: 'Propriétaire',
         //     sortName: 'users.last_name',
@@ -64,17 +69,10 @@ export default function Index({ properties }) {
         //         ),
         // },
         {
-            ...(auth.user.subtype != 'Super'
-                ? {
-                      title: 'Agence',
-                      sortName: 'agencies.name',
-                      render: property => property.agencies?.[0]?.name || 'Aucune',
-                  }
-                : {
-                      title: 'Société',
-                      sortName: 'sites.name',
-                      render: admin => admin.site.name,
-                  }),
+            hidden: auth.user.subtype != 'Super',
+            title: 'Société',
+            sortName: 'sites.name',
+            render: property => property.agency?.site?.name || 'Aucune',
         },
         {
             hidden: !auth.can.manageProperties,

@@ -11,10 +11,11 @@ import { faCheckCircle, faTimesCircle, faArrowCircleDown } from '@fortawesome/fr
 import { useForm } from '@inertiajs/inertia-react'
 import Form from '@/Components/Partial/Forms/BienUser'
 
-export default function UserSelect({ name, type = 'client', subtype = '', setData: setParentData, errors, user = null }) {
+export default function UserSelect({ name, type = 'client', subtype = '', setData: setParentData, errors, user = null, autoSwitchOwner = null }) {
     const [users, setUsers] = useState([]);
     const [searchPerformed, setSearchPerformed] = useState(false);
     const [searchInitiated, setSearchInitiated] = useState(false);
+    const [userId, setUserId] = useState('');
    
     const { data, setData, post, processing } = useForm({
         last_name: '',
@@ -48,7 +49,11 @@ export default function UserSelect({ name, type = 'client', subtype = '', setDat
     // Gestionnaires d'événements
     function handleSelect(user) {
         const newValue = user?.id || '';
+        setUserId(newValue);
         setParentData(parentData => ({ ...parentData, [name]: newValue === parentData[name] ? '' : newValue }));
+        if (autoSwitchOwner) {
+            autoSwitchOwner(user);
+        }
     }
 
     function handleSearch(e) {
@@ -141,7 +146,7 @@ export default function UserSelect({ name, type = 'client', subtype = '', setDat
                             <Table.Td>{user.email}</Table.Td>
                             <Table.Td>{user.subtype}</Table.Td>
                             <Table.Td className="text-center">
-                                {user.id == data[name] && <FontAwesomeIcon className={`text-2xl text-green-500`} icon={faCheckCircle} />}
+                                {user.id == userId && <FontAwesomeIcon className={`text-2xl text-green-500`} icon={faCheckCircle} />}
                             </Table.Td>
                         </tr>
                     ))}

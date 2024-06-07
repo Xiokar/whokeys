@@ -1,7 +1,7 @@
 import Box from '@/Components/Box'
 import Button from '@/Components/Button'
 import Description from '@/Components/Description'
-import Histories from '@/Components/Partial/Histories'
+//import Histories from '@/Components/Partial/Histories'
 import Property from '@/Components/Partial/Property'
 import Authenticated from '@/Layouts/Authenticated'
 import { usePage } from '@inertiajs/inertia-react'
@@ -19,7 +19,7 @@ export default function Create({ _key: key, canReclaim, type }) {
                 </div>
             )}
             <div className="space-y-8 mobile-padding">
-                <Property property={key.property} hideConfidentials={auth.user.type !== 'Client' ? true : false} />
+                <Property property={key.property} hideConfidentials={auth.user.subtype !== 'Super' ? true : false} />
                 <Box title="Description du trousseau" noPadding>
                     <div className="mobile-padding">
                     <Description >
@@ -37,7 +37,7 @@ export default function Create({ _key: key, canReclaim, type }) {
                     </Description>
                     </div>
                 </Box>
-                {auth.can.manageProperties && <Histories histories={key.histories} hideSignatures />}
+                {/*auth.can.manageProperties && <Histories histories={key.histories} hideSignatures />*/}
             </div>
         </Authenticated>
     )

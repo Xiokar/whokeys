@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Agency;
 use App\Models\History;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Key;
@@ -29,8 +30,9 @@ class HomeController extends Controller
 
         if ($request->user()->isSuper()) {
             $keys = Key::all();
-            $sites = Site::with('properties.keys')->get()->append('nb_keys');
-            return inertia('Statistiques', compact('sites', 'keys'));
+            $agencies = Agency::with('properties')->get()->append('nb_keys');
+            $sites = Site::with('agencies.properties.keys')->get()->append('nb_keys');
+            return inertia('Statistiques', compact('agencies', 'sites', 'keys'));
         }
 
         if (Gate::allows('manage-properties')) {
@@ -42,13 +44,14 @@ class HomeController extends Controller
             $histories->join('users', 'histories.user_id', '=', 'users.id');
             $histories->join('keys', 'histories.key_id', '=', 'keys.id');
             $histories->join('properties', 'keys.property_id', '=', 'properties.id');
+            $histories->join('agencies', 'properties.agency_id', '=', 'agencies.id');
 
             $histories->whereIn('histories.id', $keysIdOut);
 
             if (!$request->user()->isSuper()) {
-                $histories->whereRelation('key.property.site', 'id', $request->user()->site->id);
+                $histories->whereIn('agencies.id', $request->user()->agencies->pluck('id'));
             } elseif (session('config.site')) {
-                $histories->whereRelation('key.property.site', 'id', session('config.site'));
+                $histories->whereRelation('key.property.agency.site', 'id', session('config.site'));
             }
 
             $filterData = $request->filterData ?? [];

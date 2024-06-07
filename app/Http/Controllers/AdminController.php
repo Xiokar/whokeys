@@ -24,38 +24,38 @@ class AdminController extends Controller
     {
         Gate::authorize('manage-admins');
 
-        $admins = User::whereType('Administrateur')->select(['users.*', 'sites.name']);
-
-        $admins->join('sites', 'users.site_id', '=', 'sites.id');
-
-        $admins->with('site');
+        $admins = User::whereType('Administrateur');
         
         $admins->where('subtype', '!=', 'Super');
 
         if (!$request->user()->isSuper()) {
-            $admins->whereRelation('site', 'id', $request->user()->site->id);
+            $admins->whereHas('agencies', function ($builder) use ($request) {
+                $builder->whereIn('agencies.id', $request->user()->agencies->pluck('id'));
+            });
         } elseif (session('config.site')) {
-            $admins->whereRelation('site', 'id', session('config.site'));
+            $admins->whereHas('agencies', function ($builder) {
+                $builder->where('agencies.id', session('config.site'));
+            });
         }
 
-        $admins->where('users.email', '!=', $request->user()->email);
+        $admins->where('email', '!=', $request->user()->email);
         
         $filterData = $request->filterData ?? [];
         $search = $filterData['search'] ?? '';
         if ($search) {
             $admins->where(function ($builder) use ($search) {
-                $builder->where('users.email', 'LIKE', "%{$search}%");
-                $builder->orWhere('users.first_name', 'LIKE', "%{$search}%");
-                $builder->orWhere('users.last_name', 'LIKE', "%{$search}%");
-                $builder->orWhere('users.mobile', 'LIKE', "%{$search}%");
+                $builder->where('email', 'LIKE', "%{$search}%");
+                $builder->orWhere('first_name', 'LIKE', "%{$search}%");
+                $builder->orWhere('last_name', 'LIKE', "%{$search}%");
+                $builder->orWhere('mobile', 'LIKE', "%{$search}%");
                 $builder->orWhere('subtype', 'LIKE', "%{$search}%");
-                $builder->orWhereHas('site', function ($builder) use ($search) {
-                    $builder->where('name', 'LIKE', "%{$search}%");
+                $builder->orWhereHas('agencies', function ($builder) use ($search) {
+                    $builder->where('agencies.name', 'LIKE', "%{$search}%");
                 });
             });
         }
 
-        [$sortBy, $sortOrder] = $this->sort($request, $admins, 'users.created_at');
+        [$sortBy, $sortOrder] = $this->sort($request, $admins, 'created_at');
 
         $admins = $admins->paginate(10);
         
@@ -93,14 +93,8 @@ class AdminController extends Controller
         $admin->type = 'Administrateur';
         $admin->password = bcrypt(Str::random());
 
-        if ($request->user()->isSuper()) {
-            $site = Site::findOrFail($request->site);
-        } else {
-            $site = $request->user()->site;
-        }
-        $admin->site()->associate($site);
-
         $admin->save();
+        $this->sync_agencies($request, $admin);
 
         Message::success("L'administrateur <strong>{$admin->full_name}</strong> a bien été ajouté.<br>Un email pour définir son mot de passe lui sera envoyé.");
 
@@ -156,18 +150,13 @@ class AdminController extends Controller
             $admin->sendEmailVerificationNotification();
         }
 
-        if ($request->user()->isSuper()) {
-            $site = Site::findOrFail($request->site);
-            if ($request->type == 'Client') {
-                $admin->type = 'Client';
-                $admin->subtype = 'Collaborateur';
-            }
-        } else {
-            $site = $request->user()->site;
+        if ($request->type == 'Client' && $request->user()->isSuper()) {
+            $admin->type = 'Client';
+            $admin->subtype = 'Collaborateur';
         }
-        $admin->site()->associate($site);
 
         $admin->save();
+        $this->sync_agencies($request, $admin);
 
         Message::success("L'administrateur <strong>{$admin->full_name}</strong> a bien été modifié.");
 

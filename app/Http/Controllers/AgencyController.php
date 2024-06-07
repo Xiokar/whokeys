@@ -26,6 +26,9 @@ class AgencyController extends Controller
             'address' => 'required',
             'city' => 'required',
             'postcode' => 'required',
+            'mobile' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'key_limit' => ['nullable', 'integer', 'min:0'],
             'site' => [$request->user()->isSuper() ? ['required', 'exists:sites,id'] : ['nullable']]
         ]);
     }
@@ -47,7 +50,7 @@ class AgencyController extends Controller
         $agencies->with('site');
 
         if (!$request->user()->isSuper()) {
-            $agencies->whereRelation('site', 'id', $request->user()->site->id);
+            $agencies->whereIn('agencies.id', $request->user()->getAgenciesIds());
         } elseif (session('config.site')) {
             $agencies->whereRelation('site', 'id', session('config.site'));
         }
@@ -61,6 +64,8 @@ class AgencyController extends Controller
                 $builder->orWhere('address', 'LIKE', "%{$search}%");
                 $builder->orWhere('city', 'LIKE', "%{$search}%");
                 $builder->orWhere('postcode', 'LIKE', "%{$search}%");
+                $builder->orWhere('email', 'LIKE', "%{$search}%");
+                $builder->orWhere('mobile', 'LIKE', "%{$search}%");
                 $builder->orWhereHas('site', function (Builder $builder) use ($search) {
                     $builder->where('name', 'LIKE', "%{$search}%");
                 });
@@ -100,7 +105,7 @@ class AgencyController extends Controller
 
         $this->validateAgency($request);
 
-        $agency = Agency::make($request->only('name', 'address', 'city', 'postcode'));
+        $agency = Agency::make($request->only('name', 'address', 'city', 'postcode', 'email', 'mobile', 'key_limit'));
 
         if ($request->user()->isSuper()) {
             $site = Site::findOrFail($request->site);
@@ -150,8 +155,9 @@ class AgencyController extends Controller
         Gate::authorize('manage-agencies', $agency);
 
         $sites = $this->getSites();
+        $keys = $agency->getKeys();
 
-        return inertia('Agencies/Edit', compact('agency', 'sites'));
+        return inertia('Agencies/Edit', compact('agency', 'sites', 'keys'));
     }
 
     /**
@@ -167,13 +173,14 @@ class AgencyController extends Controller
 
         $this->validateAgency($request, $agency);
 
-        $agency->update($request->only('name', 'address', 'city', 'postcode'));
+        $agency->update($request->only('name', 'address', 'city', 'postcode', 'email', 'mobile', 'key_limit'));
 
         if ($request->user()->isSuper()) {
             $site = Site::findOrFail($request->site);
         } else {
-            $site = $request->user()->site;
+            $site = $request->user()->agencies[0]->site;
         }
+
         $agency->site()->associate($site);
 
         $agency->save();

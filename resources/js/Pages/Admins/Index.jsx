@@ -1,3 +1,4 @@
+import Badge from '@/Components/Badge'
 import Box from '@/Components/Box'
 import Button from '@/Components/Button'
 import Confirm from '@/Components/Confirm'
@@ -49,15 +50,13 @@ export default function Index({ admins }) {
         // },
         {
             hidden: auth.user.subtype != 'Super',
-            title: 'Société',
-            sortName: 'sites.name',
-            render: admin => admin.site.name,
-        },
-        {
-            hidden: auth.user.subtype != 'Super',
-            title: 'Agence',
+            title: 'Agences',
             sortName: 'agencies.name',
-            render: admin => admin.site.name,
+            render: client => client.agencies ? client.agencies.map(agency => (
+                <Badge key="{agency.id}">
+                    {agency.name}
+                </Badge>
+            )) : 'Aucune',
         },
         {
             title: '',

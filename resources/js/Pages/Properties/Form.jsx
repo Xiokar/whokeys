@@ -5,7 +5,8 @@ import Select from '@/Components/Form/Select'
 import Textarea from '@/Components/Form/Textarea'
 import UserSelect from '@/Components/Form/UserSelect'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
-import { useForm, usePage } from '@inertiajs/inertia-react'
+import { Link, useForm, usePage } from '@inertiajs/inertia-react'
+import { renderToString } from 'react-dom/server'
 
 export default function Form({ property = null }) {
     const { auth, sites, agencies } = usePage().props
@@ -20,8 +21,7 @@ export default function Form({ property = null }) {
         first_name: property?.first_name || '',
         mobile: property?.mobile || '',
         client: property?.user?.id || '',
-        site: property?.site_id || '',
-        agency: property?.agencies?.[0]?.id || '',
+        agency: property?.agency_id || ''
     })
 
     const inputProps = {
@@ -39,11 +39,43 @@ export default function Form({ property = null }) {
         }
     }
 
+    const changeSite = e => {
+        e.preventDefault();
+        const siteField = document.getElementById('readonly-site');
+        siteField.value = e.target.options[e.target.selectedIndex].getAttribute('site');
+    }
+
+    const getOwner = (user, isInitialOwner) => {
+        let owner = "Aucun, à définir";
+        if (user) {
+            owner = user.full_name;
+            if (auth.can.manageClients) {
+                owner = <Link href={route('clients.show', { client: user })} className="text-indigo-600 hover:text-indigo-900">
+                            {user.full_name}
+                        </Link>;
+                
+                if (!isInitialOwner) {
+                    owner = renderToString(owner);
+                }
+            }
+        }
+        return owner;
+    };
+
+    const autoSwitchOwner = (user) => {
+        const definedOwner = document.getElementById('defined-owner');
+        definedOwner.innerHTML = getOwner(user, false);
+    };
+
+    const owner = <>
+        Propriétaire : <span id="defined-owner">{getOwner(property?.user, true)}</span>
+    </>;
+
     return (
         <>
         <div className="space-y-8">
-            <Box noPadding title="Propriétaire" description="Sélectionnez le propriétaire du bien.">
-                <UserSelect name="client" subtype="Propriétaire" {...inputProps} />
+            <Box noPadding title={owner} description="Sélectionnez le propriétaire du bien.">
+                <UserSelect name="client" subtype="Propriétaire" {...inputProps} autoSwitchOwner={autoSwitchOwner} />
             </Box>
         </div>
         <form onSubmit={handleSubmit}>
@@ -62,29 +94,21 @@ export default function Form({ property = null }) {
                         <Input title="Ville" name="city" placeholder="Ville du bien" {...inputProps} />
                         <Input title="Code postal" name="postcode" placeholder="Code postal du bien" {...inputProps} />
                         <Textarea title="Description" name="description" placeholder="Description du bien" {...inputProps} />
-                        {auth.user.subtype == 'Super' && (
-                            <div className="col-span-6 sm:col-span-4">
-                                <Select title="Société" name="site" {...inputProps} >
-                                    <option value="">Société</option>
-                                    {sites.map(site => (
-                                        <option key={site.id} value={site.id}>
-                                            {site.name}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </div>
-                        )}
                         <div className="col-span-6 sm:col-span-4">
                             
-                            <Select title="Agence" name="agency" {...inputProps} required>
-                                <option value="" disabled selected>Aucune</option>
-                                {agencies.map((agency) => (
-                                    <option key={agency.id} value={agency.id}>
-                                        {agency.name}
-                                    </option>
-                                ))}
-                                
-                            </Select>
+                            {
+                                agencies.length > 1 ?
+                                    <Select title="Agence" name="agency" {...inputProps} onChangeCallback={changeSite} required>
+                                        <option value="" disabled selected>Aucune</option>
+                                        {agencies.map((agency) => (
+                                            <option key={agency.id} value={agency.id} site={agency.site.name}>
+                                                {agency.name} (société : {agency.site.name})
+                                            </option>
+                                        ))}
+                                    </Select>
+                                    :
+                                    <Input type="hidden" name="agency" value="{agency.id}" {...inputProps} />
+                            }
                             
                         </div>
                     </div>

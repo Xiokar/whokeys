@@ -25,32 +25,34 @@ class ClientController extends Controller
     {
         Gate::authorize('manage-clients');
 
-        $clients = User::whereType('Client')->select(['users.*', 'sites.name']);;
-
-        $clients->join('sites', 'users.site_id', '=', 'sites.id');
+        $clients = User::whereType('Client');
 
         if (!$request->user()->isSuper()) {
-            $clients->whereRelation('site', 'id', $request->user()->site->id);
+            $clients->whereHas('agencies', function ($builder) use ($request) {
+                $builder->whereIn('agencies.id', $request->user()->getAgenciesIds());
+            });
         } elseif (session('config.site')) {
-            $clients->whereRelation('site', 'id', session('config.site'));
+            $clients->whereHas('agencies', function ($builder) {
+                $builder->where('agencies.id', session('config.site'));
+            });
         }
 
         $filterData = $request->filterData ?? [];
         $search = $filterData['search'] ?? '';
         if ($search) {
             $clients->where(function ($builder) use ($search) {
-                $builder->where('users.email', 'LIKE', "%{$search}%");
-                $builder->orWhere('users.first_name', 'LIKE', "%{$search}%");
-                $builder->orWhere('users.last_name', 'LIKE', "%{$search}%");
-                $builder->orWhere('users.mobile', 'LIKE', "%{$search}%");
+                $builder->where('email', 'LIKE', "%{$search}%");
+                $builder->orWhere('first_name', 'LIKE', "%{$search}%");
+                $builder->orWhere('last_name', 'LIKE', "%{$search}%");
+                $builder->orWhere('mobile', 'LIKE', "%{$search}%");
                 $builder->orWhere('subtype', 'LIKE', "%{$search}%");
-                $builder->orWhereHas('site', function ($builder) use ($search) {
-                    $builder->where('name', 'LIKE', "%{$search}%");
+                $builder->orWhereHas('agencies', function ($builder) use ($search) {
+                    $builder->where('agencies.name', 'LIKE', "%{$search}%");
                 });
             });
         }
 
-        [$sortBy, $sortOrder] = $this->sort($request, $clients, 'users.created_at');
+        [$sortBy, $sortOrder] = $this->sort($request, $clients, 'created_at');
 
         $clients = $clients->paginate(10);
 
@@ -66,7 +68,7 @@ class ClientController extends Controller
 
         $user = auth()->user();
 
-        $userSiteId = $user->site_id;
+        $userSiteId = $user->agency->site_id;
         $agencies = [];
 
         if ($user->isSuper()) {
@@ -134,12 +136,10 @@ class ClientController extends Controller
                 'id' => $user['id'],
                 'first_name' => $user['first_name'],
                 'last_name' => $user['last_name'],
-                'site_id' => $user['site_id']
+                'agency_id' => $user['agency_id']
             ]
         ]);
     }
-    
-    
 
     /**
      * @param  \Illuminate\Http\Request  $request
@@ -149,10 +149,8 @@ class ClientController extends Controller
     {
         Gate::authorize('manage-clients');
 
-        
         $existingEmailUser = User::where('email', $request->input('email'))->first();
         if ($existingEmailUser) {
-           
             return redirect()->back()->withErrors(['email' => 'L\'adresse email est déjà utilisée.']);
         }
 
@@ -168,14 +166,9 @@ class ClientController extends Controller
         $client->type = 'Client';
         $client->password = bcrypt(Str::random());
 
-        if ($request->user()->isSuper()) {
-            $site = Site::findOrFail($request->site);
-        } else {
-            $site = $request->user()->site;
-        }
-        $client->site()->associate($site);
-
         $client->save();
+
+        $this->sync_agencies($request, $client);
 
         Message::success("L'utilisateur <strong>{$client->full_name}</strong> a bien été ajouté.<br>Un email pour définir son mot de passe lui sera envoyé.");
 
@@ -191,10 +184,10 @@ class ClientController extends Controller
         // si admin d'un autre site id as pris une clé les infos doivent être disponible
 
         $actual_user = auth()->user();
-        $actual_site = $actual_user->site_id;
-        $client_site_id = $client->site_id;
+        $actual_agency = $actual_user->agency_id;
+        $client_agency_id = $client->agency_id;
 
-        if ($actual_site == $client_site_id) {
+        if ($actual_agency == $client_agency_id) {
             Gate::authorize('manage-clients', $client);
         }
 
@@ -212,9 +205,9 @@ class ClientController extends Controller
     {
         Gate::authorize('manage-clients', $client);
 
-        $sites = $this->getSites();
+        $agencies = $this->getAgencies();
 
-        return inertia('Clients/Edit', compact('client', 'sites'));
+        return inertia('Clients/Edit', compact('client', 'agencies'));
     }
 
     /**
@@ -237,18 +230,13 @@ class ClientController extends Controller
             $client->sendEmailVerificationNotification();
         }
 
-        if ($request->user()->isSuper()) {
-            $site = Site::findOrFail($request->site);
-            if ($request->type == 'Administrateur') {
-                $client->type = 'Administrateur';
-                $client->subtype = 'Gestionnaire';
-            }
-        } else {
-            $site = $request->user()->site;
+        if ($request->type == 'Administrateur' && $request->user()->isSuper()) {
+            $client->type = 'Administrateur';
+            $client->subtype = 'Gestionnaire';
         }
-        $client->site()->associate($site);
 
         $client->save();
+        $this->sync_agencies($request, $client);
 
         Message::success("L'utilisateur <strong>{$client->full_name}</strong> a bien été modifié.");
 

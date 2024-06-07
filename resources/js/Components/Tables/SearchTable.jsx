@@ -24,7 +24,7 @@ function Filter({ filter, ...props }) {
     }
 }
 
-export default function SearchTable({ columns, data, routeName, header = null, filters = [] }) {
+export default function SearchTable({ columns, data, routeName, header = null, filters = [], isAbsolute = false }) {
     const { sortBy, sortOrder, filterData: initialFilterData = {} } = usePage().props
 
     const [filterData, setFilterData] = useState(initialFilterData)
@@ -46,9 +46,11 @@ export default function SearchTable({ columns, data, routeName, header = null, f
         Inertia.get(route(routeName), { filterData, page: 1, sortBy: sortName, sortOrder }, { preserveState: true })
 
     columns = columns.filter(column => !column.hidden)
+    const containerClasses = "flex justify-between items-center " + (isAbsolute ? 'py-3 px-5 absolute top-0 right-0' : 'p-5');
+
     return (
         <>
-            <div className="p-5 flex justify-between items-center">
+            <div className={containerClasses}>
                 <div>
                     <div className="flex items-center gap-2">
                         <Input

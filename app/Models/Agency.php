@@ -10,6 +10,8 @@ class Agency extends Model
 {
     use HasFactory, HasSite;
 
+    protected $with = ['site'];
+
     /**
      * @var string[]
      */
@@ -18,6 +20,9 @@ class Agency extends Model
         'address',
         'city',
         'postcode',
+        'email',
+        'mobile',
+        'key_limit',
     ];
 
     protected $appends = ['full_address'];
@@ -27,11 +32,27 @@ class Agency extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function properties()
     {
-        return $this->belongsToMany(Property::class);
+        return $this->hasMany(Property::class);
+    }
+
+    /**
+     * @return string
+     */
+    public function getKeys()
+    {
+        return Key::whereRelation('property.agency', 'id', $this->id)->orderBy('identifier')->get();
+    }
+
+    /**
+     * @return int
+     */
+    public function getNbKeysAttribute()
+    {
+        return Key::whereRelation('property.agency', 'id', $this->id)->count();
     }
 
     /**

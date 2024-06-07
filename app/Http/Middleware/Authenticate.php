@@ -21,8 +21,9 @@ class Authenticate extends Middleware
                 $keyId = $request->route('key');
                 $key = Key::find($keyId);
                 if ($key) {
-                    $site = $key->property->site;
-                    Message::warning("Si vous ne possédez pas de compte, veuillez contacter l'agence au {$site->mobile}");
+                    $agency = $key->property->agency;
+                    $mobile = !empty($agency->mobile) ? $agency->mobile : $key->property->mobile;
+                    Message::warning("Si vous ne possédez pas de compte, veuillez contacter l'agence au {$mobile}");
                 }
             }
             return route('login');

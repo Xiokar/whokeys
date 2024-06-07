@@ -12,6 +12,8 @@ class Key extends Model
     use HasFactory;
     use HasMedia;
 
+    protected $with = ['property'];
+
     /**
      * @var string[]
      */

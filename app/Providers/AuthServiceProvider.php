@@ -35,29 +35,23 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('manage-agencies', function (User $user, ?Agency $agency = null) {
             if ($user->isSuper()) return true;
             if ($user->isAdmin()) {
-                if ($agency) {
-                    if ($agency->site->id != $user->site->id) return false;
-                }
-                return true;
+                return is_null($agency) || $user->hasAgency($agency->id);
             }
         });
 
         Gate::define('manage-clients', function (User $user, ?User $client = null) {
-            if ($user->isSuper()) return true;
+            if ($user->isSuper()){ return true; }
             if ($user->isAdmin()) {
-                if ($client) {
-                    if (!$client->isClient() || $client->site->id != $user->site->id) return false;
-                }
-                return true;
+                return is_null($client) || ($client->isClient() && $user->hasOneAgencyFromUser($client));
             }
         });
 
         Gate::define('manage-properties', function (User $user, ?Property $property = null) {
-            if ($user->isSuper()) return true;
-            if ($user->isAdmin()) {
-                if ($property && $property->site->id != $user->site->id) return false;
-                return true;
-            }
+            return $user->isSuper()
+            || (
+                $user->isAdmin()
+                && (is_null($property) || $user->hasAgency($property->agency->id))
+            );
         });
 
         Gate::define('manage-alerts', function (User $user) {

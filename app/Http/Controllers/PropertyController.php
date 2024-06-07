@@ -31,7 +31,6 @@ class PropertyController extends Controller
             'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'mobile' => ['nullable', 'string', 'max:10', 'regex:/^0[1-9](\d{8}|\d{9})$/'],
-            'site' => Auth::user()->isSuper() ? 'required|exists:sites,id' : 'nullable',
             'agency' => 'nullable|exists:agencies,id',
             'client' => 'nullable',
         ]);
@@ -54,15 +53,12 @@ class PropertyController extends Controller
 
         $properties = Property::select(['properties.*', 'users.last_name', 'agencies.name', 'sites.name']);
         $properties->leftJoin('users', 'properties.user_id', '=', 'users.id');
-        $properties->leftJoin('agency_property', 'agency_property.property_id', '=', 'properties.id');
-        $properties->leftJoin('agencies', 'agencies.id', '=', 'agency_property.agency_id');
-        $properties->leftJoin('sites', 'properties.site_id', '=', 'sites.id');
-        $properties->with('user', 'agencies');
+        $properties->leftJoin('agencies', 'agencies.id', '=', 'properties.agency_id');
+        $properties->leftJoin('sites', 'sites.id', '=', 'agencies.site_id');
+        $properties->with('user', 'agency');
 
         if (!$user->isSuper()) {
-            $properties->whereRelation('site', 'id', $user->site->id);
-        } elseif (session('config.site')) {
-            $properties->whereRelation('site', 'id', session('config.site'));
+            $properties->whereIn('agencies.id', $user->agencies->pluck('id'));
         }
         
         $filterData = $request->filterData ?? [];
@@ -102,24 +98,17 @@ class PropertyController extends Controller
             $properties->WhereHas('agencies', function (Builder $builder) use ($agency) {
                 $builder->where('agencies.name', 'LIKE', $agency);
             });
-            
         }
 
         if ($search && $filterType === 'keys') {
             $properties->WhereHas('keys', function (Builder $builder) use ($search) {
-                $builder->where('keys.number_keys', '=', $search);
+                $builder->where('keys.identifier', '=', $search);
             });
         }
 
         [$sortBy, $sortOrder] = $this->sort($request, $properties, 'properties.created_at');
 
         $properties = $properties->paginate(10);
-
-        if (!$agencies->containsStrict('id', $agency))
-        {
-            //$filterData['agency'] = '';
-            return inertia('Properties/Index', compact('properties', 'agencies', 'filterData', 'sortBy', 'sortOrder'));
-        } 
 
         return inertia('Properties/Index', compact('properties', 'agencies', 'filterData', 'sortBy', 'sortOrder'));
     }
@@ -164,17 +153,14 @@ class PropertyController extends Controller
         $property = Property::make($request->all());
         $property->description = $request->description ?: '';
 
-        
         $property->user()->associate($client ?? null);
-        
-        $site = Auth::user()->isSuper() ? Site::findOrFail($request->site) : Auth::user()->site;
-        $property->site()->associate($site);
-        
 
         $property->save();
 
-        $property->agencies()->detach();
-        if ($request->agency) $property->agencies()->attach(Agency::findOrFail($request->agency));
+        $property->agency()->detach();
+        if ($request->agency) {
+            $property->agency()->attach(Agency::findOrFail($request->agency));
+        }
 
         Message::success("Le bien <strong>{$property->full_address}</strong> a bien été ajouté.");
 
@@ -189,7 +175,7 @@ class PropertyController extends Controller
     {
         Gate::authorize('manage-properties', $property);
 
-        $property->load('keys.latestHistory.user', 'user', 'agencies');
+        $property->load('keys.latestHistory.user', 'user', 'agency');
 
         $property->latestHistories = $property->keys()->with('histories.user', 'histories.key')->get()->map->histories->flatten()->sortByDesc('id');
 
@@ -204,7 +190,7 @@ class PropertyController extends Controller
     {
         Gate::authorize('manage-properties', $property);
 
-        $property->load('keys', 'user', 'agencies');
+        $property->load('keys', 'user', 'agency');
 
         $sites = $this->getSites();
         $agencies = $this->getAgencies();
@@ -227,20 +213,12 @@ class PropertyController extends Controller
             $client = User::findOrFail($request->client);
         }
 
+        $agency = Agency::findOrFail($request->agency);
+
         $property->update($request->except('description'));
         $property->description = $request->description ?: '';
         $property->user()->associate($client ?? null);
-
-        if (Auth::user()->isSuper()) {
-            $site = Site::findOrFail($request->site);
-        } else {
-            $site = Auth::user()->site;
-        }
-        $property->site()->associate($site);
-
-        $property->agencies()->detach();
-        if ($request->agency) $property->agencies()->attach(Agency::findOrFail($request->agency));
-
+        $property->agency()->associate($agency ?? null);
         $property->save();
 
         Message::success("Le bien <strong>{$property->full_address}</strong> a bien été modifié.");

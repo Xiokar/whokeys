@@ -50,7 +50,7 @@ class TestSeeder extends Seeder
         Note::factory(10)->create();
 
         Property::all()->each(function (Property $property) {
-            $agency = Agency::whereRelation('site', 'id', $property->site->id)->inRandomOrder()->first();
+            $agency = Agency::where('id', $property->agency->id)->inRandomOrder()->first();
             if ($agency) $property->agencies()->attach($agency);
         });
 

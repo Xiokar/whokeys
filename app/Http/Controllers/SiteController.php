@@ -28,7 +28,6 @@ class SiteController extends Controller
             'mobile' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'siret' => ['required'],
-            'key_limit' => ['nullable', 'integer', 'min:0'],
             'agencie_limit' => ['nullable', 'integer', 'min:0'],
         ]);
     }
@@ -86,7 +85,7 @@ class SiteController extends Controller
         Gate::authorize('manage-sites');
         @$this->validateSite($request);
 
-        $site = Site::create($request->only('name', 'last_name', 'first_name', 'email', 'mobile', 'siret', 'key_limit', 'agencie_limit'));
+        $site = Site::create($request->only('name', 'last_name', 'first_name', 'email', 'mobile', 'siret', 'agencie_limit'));
 
         Message::success("Le site <strong>{$site->name}</strong> a bien été créé.");
 
@@ -132,7 +131,7 @@ class SiteController extends Controller
 
         $this->validateSite($request, $site);
 
-        $site->update($request->only('name', 'last_name', 'first_name', 'email', 'mobile', 'siret', 'key_limit', 'agencie_limit'));
+        $site->update($request->only('name', 'last_name', 'first_name', 'email', 'mobile', 'siret', 'agencie_limit'));
 
         Message::success("Le site <strong>{$site->name}</strong> a bien été modifié.");
 

@@ -1,3 +1,4 @@
+import { faArrowCircleLeft } from '@fortawesome/free-solid-svg-icons'
 import Button from '@/Components/Button'
 import File from '@/Components/Form/File'
 import Input from '@/Components/Form/Input'
@@ -86,6 +87,9 @@ export default function User({ _key: key = null, property }) {
     return (
         <form onSubmit={handleSubmit}>
             <div className="space-y-8">
+                <Button htmlTag="a" icon={faArrowCircleLeft} href={route('properties.show', { property })}>
+                    Retour
+                </Button>
                 <Box
                     title="Information du trousseau"
                     description={key ? `Modifier les informations du trousseau` : `Définissez les informations du trousseau`}

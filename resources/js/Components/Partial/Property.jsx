@@ -13,15 +13,19 @@ export default function Property({ property, hasEdit, hasBack, hideConfidentials
 
     if (property.latestHistories && !isEmptyObject(property.latestHistories)) {
         const histories = Object.values(property.latestHistories);
-        const history = histories.pop();
-        hasEdit = hasEdit && history.type == 'in';
+
+        // TODO : modifier les histories type en key.status (plus pertinent)
+        if (histories.length > 0) {
+            const history = histories.pop();
+            hasEdit = hasEdit && history.type == 'in';
+        }
     }
 
     if (hideConfidentials) {
         infos = <Description>
             <div className="mobile-padding">
                 <Description.Row title="Agence">
-                    <div className="capitalize">{property.agencies?.[0]?.name || 'Aucune'}</div>
+                    <div className="capitalize">{property.agency?.name || 'Aucune'}</div>
                 </Description.Row>
             </div>
         </Description>;
@@ -40,9 +44,9 @@ export default function Property({ property, hasEdit, hasBack, hideConfidentials
 
         infos = <Description>
             <div className="mobile-padding">
-                {auth.user.subtype == 'Super' && <Description.Row title="Société">{property.site.name}</Description.Row>}
+                {auth.user.subtype == 'Super' && <Description.Row title="Société">{property.agency?.site?.name || 'Aucune'}</Description.Row>}
                 <Description.Row title="Agence">
-                    <div className="capitalize">{property.agencies?.[0]?.name || 'Aucune'}</div>
+                    <div className="capitalize">{property.agency?.name || 'Aucune'}</div>
                 </Description.Row>
                 <Description.Row title="Propriétaire">{owner}</Description.Row>
                 <Description.Row title="Adresse">{property.address}</Description.Row>

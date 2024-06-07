@@ -45,9 +45,11 @@ class SendAlerts extends Command
         foreach ($alerts as $alert) {
             $user = $alert->user;
             $key = $alert->key;
-            $user->notify(new AlertUser($alert));
-            foreach (User::whereType('Administrateur')->whereRelation('site', 'id', $key->property->site->id)->get() as $admin) {
-                $admin->notify(new AlertAdmin($alert));
+            if (env('APP_ENV') !== 'local') {
+                $user->notify(new AlertUser($alert));
+                foreach (User::whereType('Administrateur')->whereRelation('agency', 'id', $key->property->agency->id)->get() as $admin) {
+                    $admin->notify(new AlertAdmin($alert));
+                }
             }
             $alert->update(['processed' => true]);
         }

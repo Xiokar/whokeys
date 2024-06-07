@@ -37,11 +37,6 @@ export default function Index({ sites }) {
             render: site => site.siret,
         },
         {
-            title: 'Limite de trousseaux',
-            sortName: 'key_limit',
-            render: site => (site.key_limit === null ? 'Illimité' : site.key_limit),
-        },
-        {
             title: 'Limite d\'agence',
             sortName: 'agencie_limit',
             render: site => (site.agencie_limit === null ? 'Illimité' : site.agencie_limit),

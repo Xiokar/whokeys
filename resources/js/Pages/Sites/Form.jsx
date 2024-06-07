@@ -11,7 +11,6 @@ export default function User({ site = null }) {
         email: site?.email || '',
         mobile: site?.mobile || '',
         siret: site?.siret || '',
-        key_limit: site?.key_limit || '',
         agencie_limit: site?.agencie_limit || '',
     })
 
@@ -53,15 +52,6 @@ export default function User({ site = null }) {
                     </div>
                     <div className="col-span-6 sm:col-span-4">
                         <Input title="SIRET" type="text" name="siret" autoComplete="siret" {...inputProps} />
-                    </div>
-                    <div className="col-span-6 sm:col-span-4">
-                        <Input
-                            title="Limite de trousseaux (laisser vide pour illimité)"
-                            type="text"
-                            name="key_limit"
-                            autoComplete="key_limit"
-                            {...inputProps}
-                        />
                     </div>
                     <div className="col-span-6 sm:col-span-4">
                         <Input

@@ -28,7 +28,7 @@ export default function User({ user, type, setParentData: setMainFormData }) {
                     first_name: selectedOwner.first_name,
                     last_name: selectedOwner.last_name,
                     mobile: data.mobile,
-                    site: selectedOwner.site_id,
+                    agency: selectedOwner.agency_id,
                     client: selectedOwner.id
                 })
             );

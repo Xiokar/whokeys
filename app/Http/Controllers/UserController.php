@@ -20,10 +20,12 @@ class UserController extends Controller
     {
         Gate::authorize('manage-admins');
 
-        $users = User::query();
+        $users = User::where('subtype', '!=', 'Super');
 
         if (!Auth::user()->isSuper()) {
-            $users->whereRelation('site', 'id', Auth::user()->site->id);
+            $users->whereHas('agencies', function ($builder) use ($request) {
+                $builder->whereIn('agencies.id', Auth::user()->getAgenciesIds());
+            });
         }
 
         if ($request->type) {
@@ -33,8 +35,6 @@ class UserController extends Controller
         if ($request->subtype) {
             $users->whereIn('subtype', explode(',', $request->subtype));
         }
-
-        $users->where('subtype', '!=', 'Super');
         
         if ($request->search) {
             $search = $request->search;

@@ -20,6 +20,14 @@ use Illuminate\Validation\ValidationException;
 
 class KeyController extends Controller
 {
+    public function index(Request $request)
+    {
+        $keys = Key::whereHas('property.agency', function ($query) use ($request) {
+            $query->whereIn('id', $request->user()->getAgenciesIds());
+        })->orderBy('identifier')->get();
+        return inertia('Keys/Index', compact('keys'));
+    }
+
     /**
      * @param  \Illuminate\Http\Request  $request
      * @param  \App\Models\Property  $property
@@ -42,8 +50,21 @@ class KeyController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request, $property, $key) {
-            if (Key::whereRelation('property.site', 'id', $property->site->id)->whereIdentifier($request->identifier)->where('id', '!=', $key->id ?? 0)->count()) {
-                $validator->errors()->add('identifier', 'Cet identifiant est déjà utilisé');
+            if (is_null($property->agency)) {
+                $msg = "Vous devez associer une agence au bien immobillier pour pouvoir générer un trousseau "
+                     . "(retournez sur la fiche du bien)";
+                $validator->errors()->add('name', $msg);
+                return;
+            }
+
+            $keys = Key::whereRelation('property.agency', 'id', $property->agency->id)->whereIdentifier($request->identifier);
+
+            if (!is_null($key)) {
+                $keys->where('id', '!=', $key->id ?? 0);
+            }
+
+            if ($keys->count()) {
+                $validator->errors()->add('name', 'Une erreur est survenue, veuillez réessayer (identifiant déjà utilisé)');
             }
         });
 
@@ -152,16 +173,14 @@ class KeyController extends Controller
 
         $this->validateForm($request, $property);
 
-        $keyLimit = $property->site->key_limit;
+        $keyLimit = $property->agency->key_limit;
 
-        if (!is_null($keyLimit)) {
-            if ($property->site->nb_keys + 1 > $keyLimit) {
-                Message::warning("Vous avez dépassé votre limite de trousseaux.");
-                return redirect()->back()->withInput();
-            }
+        if (!is_null($keyLimit) && $property->agency->nb_keys + 1 > $keyLimit) {
+            Message::warning("Vous avez dépassé votre limite de trousseaux.");
+            return redirect()->back()->withInput();
         }
 
-        $identifiers = Key::whereRelation('property.site', 'id', $property->site->id)->pluck('identifier')->sort();
+        $identifiers = Key::whereRelation('property.agency', 'id', $property->agency->id)->pluck('identifier')->sort();
         $identifier = 0;
 
         for ($i = 1; $i < 99999; $i++) {
@@ -281,9 +300,13 @@ class KeyController extends Controller
     {
         Gate::authorize('manage-properties');
 
-        $key = Key::whereRelation('property.site', 'id', Auth::user()->site->id)->whereIdentifier($request->id)->first();
+        $key = Key::whereHas('property.agency', function ($query) {
+            $query->whereIn('id', Auth::user()->agencies->pluck('id'));
+        })->whereIdentifier($request->id)->first();
 
-        if (!$key) throw ValidationException::withMessages(['id' => "Aucun trousseau n'a été trouvé"]);
+        if (!$key) {
+            throw ValidationException::withMessages(['id' => "Aucun trousseau n'a été trouvé"]);
+        }
 
         return redirect()->route('keys.show', compact('key'));
     }

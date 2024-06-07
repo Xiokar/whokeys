@@ -1,3 +1,4 @@
+import Badge from '@/Components/Badge'
 import Box from '@/Components/Box'
 import Button from '@/Components/Button'
 import Description from '@/Components/Description'
@@ -59,7 +60,16 @@ export default function Show({ admin }) {
                             'Aucune'
                         )}
                     </Description.Row>
-                    {auth.user.subtype == 'Super' && <Description.Row title="Société">{admin.site.name}</Description.Row>}
+                    {
+                        auth.user.subtype == 'Super' &&
+                        <Description.Row title="Agences">
+                            {admin.agencies ? admin.agencies.map(agency => (
+                                <Badge key="{agency.id}">
+                                    {agency.name}
+                                </Badge>
+                            )) : 'Aucune'}
+                        </Description.Row>
+                    }
                 </Description>
             </Box>
         </Authenticated>

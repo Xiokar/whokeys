@@ -17,7 +17,9 @@ class UserObserver
     public function created(User $user)
     {
         $user->update(['token' => Str::random(30)]);
-        if (!config('app.is_seeding', false)) $user->notify(new UserCreated);
+        if (!config('app.is_seeding', false) && env('APP_ENV') !== 'local') {
+            $user->notify(new UserCreated);
+        }
     }
 
     /**
@@ -40,6 +42,8 @@ class UserObserver
 
         Auth::user()->log("Suppression de l'utilisateur {$user->name}.");
 
-        $user->notify(new UserDeleted);
+        if (env('APP_ENV') !== 'local') {
+            $user->notify(new UserDeleted);
+        }
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Traits\HasSite;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -12,9 +11,9 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, Notifiable, HasSite;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    protected $with = ['site'];
+    protected $with = ['agencies'];
 
     protected $appends = ['full_name', 'owned_keys'];
 
@@ -71,6 +70,14 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(History::class);
     }
+    
+    /**
+    * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    */
+   public function agencies()
+   {
+       return $this->belongsToMany(Agency::class);
+   }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
@@ -132,5 +139,20 @@ class User extends Authenticatable implements MustVerifyEmail
     public function log($message)
     {
         Log::info("{$this->full_name} / {$message}");
+    }
+
+    public function getAgenciesIds(): array
+    {
+        return $this->agencies->pluck('id')->toArray();
+    }
+
+    public function hasAgency(int $agency_id): bool
+    {
+        return in_array($agency_id, $this->getAgenciesIds());
+    }
+
+    public function hasOneAgencyFromUser(User $user): bool
+    {
+        return count(array_intersect($user->getAgenciesIds(), $this->getAgenciesIds())) > 0;
     }
 }

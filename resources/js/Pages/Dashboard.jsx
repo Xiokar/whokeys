@@ -78,11 +78,11 @@ function Histories() {
             ),
         },
         {
-            title: 'Nom du trousseau',
+            title: 'Numéro de trousseau',
             sortName: 'keys.name',
             render: history => (
                 <Link href={route('keys.show', { key: history.key })} className="font-semibold hover:underline text-blue-500">
-                    {history.key.name}
+                    #{history.key.identifier} ({history.key.name})
                 </Link>
             ),
         },
@@ -90,7 +90,7 @@ function Histories() {
             title: 'Possesseur actuel',
             sortName: 'users.last_name',
             render: history =>
-                auth.can.manageClients && history.user.type == 'Client' || history.user.site_id != auth.site_id ? (
+                auth.can.manageClients && history.user.type == 'Client' || history.user.agency_id != auth.agency_id ? (
                     <Link href={route('clients.show', { client: history.user })} className="font-semibold hover:underline text-blue-500">
                         {history.user.full_name}
                     </Link>
@@ -127,8 +127,8 @@ function Histories() {
 
     return (
         <div className="space-y-8 mobile-padding">
-            <Box noPadding>
-                <SearchTable columns={columns} data={histories} routeName="dashboard" header="Trousseaux sortis" />
+            <Box noPadding title="Trousseaux sortis">
+                <SearchTable columns={columns} data={histories} routeName="dashboard" isAbsolute={true} />
             </Box>
         </div>
     )
@@ -164,8 +164,18 @@ function CreateNote({ _key: key }) {
 export default function Dashboard() {
     const { auth } = usePage().props
 
+    const getKeyInfos = (key) => {
+        return <>
+            <strong>Trousseau n°{key.identifier}</strong> ({key.name})<br />
+            <small class="text-gray-400">{key.property.agency.site.name} / {key.property.agency.name} / {key.identifier}</small><br />
+            <small>
+                {key.property.full_address}
+            </small>
+        </>
+    }
+
     return (
-        <Authenticated breadcrumb={{ 'Tableau de bord': null }} title="Tableau de bord">
+        <Authenticated breadcrumb={{ 'Tableau de bord': null }} title="Tableau de bord" fullWidth={true}>
             <div className="space-y-8">
                 {auth.can.manageProperties && (
                     <>
@@ -180,25 +190,37 @@ export default function Dashboard() {
                 {auth.user.owned_keys.length > 0 && (
                     <div>
                         <div className="text-center font-semibold text-gray-700 leading-tight text-4xl my-6">Trousseaux en possession</div>
-                        {auth.user.owned_keys.map((key, index) => (
-                            <Box key={key.id} noPadding title={key.name} className={index ? 'mt-6' : ''}>
-                                <div className="p-4">
-                                    <CreateNote _key={key} />
-                                    <div className="remarque">
-                                    <p className="remarque-address">{key.property.full_address} <br/> <strong>{key.property.description}</strong></p>
+                        <div className="grid md:grid-cols-3 gap-12 md:gap-4 mt-8">
+                            {auth.user.owned_keys.map((key, index) => (
+                                <Box key={key.id} noPadding title={getKeyInfos(key)} className={index ? 'mt-6' : ''}>
+                                    {
+                                        key.property.description.length > 0 && (
+                                            <div className="p-4 remarque">
+                                                <p className="remarque-address">
+                                                    <strong>{key.property.description}</strong>
+                                                </p>
+                                            </div>
+                                        )
+                                    }
+                                    <div className="p-4 border-b border-gray-200">
+                                        <CreateNote _key={key} />
                                     </div>
                                     {key.notes.length > 0 && (
-                                        <ul className="mt-3 text-right">
-                                            {take(orderBy(key.notes, 'id', 'desc'), 3).map(note => (
-                                                <li key={note.id} className="my-3">
-                                                    {note.text} / <strong>{note.date}</strong>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                        <div className="p-4">
+                                            <strong>Remarques additionnelles</strong><br />
+                                            <ul className="mt-2">
+                                                {take(orderBy(key.notes, 'id', 'desc'), 3).map(note => (
+                                                    <li key={note.id} className="my-3">
+                                                        <small><strong>{note.date}</strong></small><br />
+                                                        {note.text}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
                                     )}
-                                </div>
-                            </Box>
-                        ))}
+                                </Box>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

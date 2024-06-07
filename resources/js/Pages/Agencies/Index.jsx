@@ -45,10 +45,25 @@ export default function Index({ agencies }) {
             render: agency => agency.postcode,
         },
         {
+            title: 'Email',
+            sortName: 'email',
+            render: agency => agency.email,
+        },
+        {
+            title: 'Téléphone',
+            sortName: 'mobile',
+            render: agency => agency.mobile,
+        },
+        {
+            title: 'Limite de trousseaux',
+            sortName: 'key_limit',
+            render: agency => (agency.key_limit === null ? 'Illimité' : agency.key_limit),
+        },
+        {
             hidden: auth.user.subtype != 'Super',
             title: 'Société',
             sortName: 'sites.name',
-            render: admin => admin.site.name,
+            render: admin => admin.site?.name,
         },
         {
             title: '',

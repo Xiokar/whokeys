@@ -20,7 +20,6 @@ class Site extends Model
         'mobile',
         'email',
         'active',
-        'key_limit',
         'agencie_limit',
         'siret',
     ];
@@ -38,17 +37,17 @@ class Site extends Model
     /**
      * @return string
      */
-    public function getNbKeysAttribute()
+    public function getNbAgenciesAttribute()
     {
-        return Key::whereRelation('property.site', 'id', $this->id)->count();
+        return Agency::where('site_id', $this->id)->count();
     }
 
     /**
      * @return string
      */
-    public function getNbAgenciesAttribute()
+    public function getNbKeysAttribute()
     {
-        return Agency::where('site_id', $this->id)->count();
+        return Key::whereRelation('property.agency.site', 'id', $this->id)->count();
     }
 
     /**
@@ -59,17 +58,9 @@ class Site extends Model
         return $this->hasMany(Agency::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function properties()
-    {
-        return $this->hasMany(Property::class);
-    }
-
     public function isAdmin(User $user)
     {
-        return $user->type === 'Administrateur' && $user->site_id === $this->id;
+        return $user->type === 'Administrateur' && $user->agency->site_id === $this->id;
     }
 
     public function isAdminActingAsUser(User $user)

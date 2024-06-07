@@ -69,6 +69,13 @@ export default function Authenticated({ title, children, breadcrumb = [], fullWi
                                     </NavLink>
                                 </div>
                             )}
+                            {auth.user.type == 'Administrateur' && auth.user.subtype !== 'Super' && (
+                                <div className="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
+                                    <NavLink href={route('keys.index')} active={route().current('keys.*')}>
+                                        Trousseaux
+                                    </NavLink>
+                                </div>
+                            )}
                             {auth.can.manageSites && (
                                 <div className="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                                     <NavLink href={route('sites.index')} active={route().current('sites.*')}>

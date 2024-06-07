@@ -16,7 +16,6 @@ use App\Models\User;
 use App\Models\Key;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Note;
-use App\Models\Property;
 
 class HistoryController extends Controller
 {
@@ -93,6 +92,10 @@ class HistoryController extends Controller
      */
     protected function notifyClient(User $client, Key $key, string $type)
     {
+        if (env('APP_ENV') === 'local') {
+            return;
+        }
+
         if ($type == 'def') {
             Mail::to($client->email)->send(new KeyDefinitiveClaimed($client, $key));
         } else {
@@ -113,9 +116,6 @@ class HistoryController extends Controller
      */
     protected function persist(Key $key, User $user, $type)
     {
-        $property_id = $key->property_id;
-        $property = Property::with('agencies')->where('id', $property_id)->first();
-
         $lastHistory = $key->latestHistory;
 
         if (!is_null($lastHistory) && $lastHistory->type === 'def') {
@@ -143,17 +143,20 @@ class HistoryController extends Controller
 
         $key->load('latestHistory');
 
-        if (!is_null($lastHistory) && !is_null($lastHistory->alert))
+        if (!is_null($lastHistory) && !is_null($lastHistory->alert)) {
             $lastHistory->alert->delete();
+        }
 
-        $notifiable = $type == 'out' || $type == 'def' ? $user : $lastHistory->user;
+        if (env('APP_ENV') !== 'local') {
+            $notifiable = $type == 'out' || $type == 'def' ? $user : $lastHistory->user;
 
-        $this->notifyClient($notifiable, $key, $type);
-
-        $siteAdmins = User::whereRelation('site', 'id', $key->property->site->id)->whereType('Administrateur')->get();
-
-        foreach ($siteAdmins as $admin) {
-            $admin->notify(new KeyClaimed($key));
+            $this->notifyClient($notifiable, $key, $type);
+    
+            $agencyAdmins = User::whereRelation('agency', 'id', $key->property->agency->id)->whereType('Administrateur')->get();
+    
+            foreach ($agencyAdmins as $admin) {
+                $admin->notify(new KeyClaimed($key));
+            }
         }
 
         return $history;
@@ -178,7 +181,6 @@ class HistoryController extends Controller
         
         // Procédez avec l'enregistrement de l'histoire de la clé en utilisant $type
         $history = $this->persist($key, $user, $type);
-        
     
         // Gestion des notes
         if (!empty($request->text)) {
